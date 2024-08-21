@@ -10,6 +10,8 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util.js';
   // Set the network port
   const port = process.env.PORT || 8082;
   
+  const image_url_regex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpeg|jpg|gif|png|svg)/
+
   // Use the body parser middleware for post requests
   app.use(bodyParser.json());
 
@@ -28,6 +30,41 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util.js';
   //   the filtered image file [!!TIP res.sendFile(filteredpath); might be useful]
 
     /**************************************************************************** */
+    app.get("/filteredimage", async (req, res) => {
+      //
+      let { image_url } = req.query;
+      
+      // return error if parameter is missing
+      if (!image_url) {
+        res.status(400).send("image url missing")
+      }else {
+  
+        // return error if image url format is incorrect
+        console.log(image_url.match(image_url_regex))
+        if (!image_url.match(image_url_regex)) {
+          res.status(400).send("image url format is incorrect")
+        }else {
+          
+          try {
+            let image_response = await filterImageFromURL(image_url)
+            // if image reader does not fail return image else return error
+            if(image_response != "no image found"){
+              res.status(200).sendFile(image_response, async callback=>{
+                await deleteLocalFiles([image_response])
+              })
+            } else {
+              res.status(200).send("no image found in the given url")
+            }
+          } catch (err) {
+            // other errors
+            console.error(err)
+            res.status(200).send("image processing failed")
+          }
+        }
+      }
+  
+      //
+    } );
 
   //! END @TODO1
   
